@@ -56,10 +56,10 @@ def make_matching_figure(
         ###########
         use_uniform_color = True
         if use_uniform_color:
-
+            # c = color[i]
             fig.lines = [matplotlib.lines.Line2D((fkpts0[i, 0], fkpts1[i, 0]),
                                                  (fkpts0[i, 1], fkpts1[i, 1]),
-                                                 transform=fig.transFigure, c=color[i], linewidth=1)
+                                                 transform=fig.transFigure, c='b', linewidth=1)
                          ###########
                          for i in indices[:10]]
             ###########
