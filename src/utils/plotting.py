@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 
 import torch
+import random
 
 
 def _compute_conf_thresh(data):
@@ -19,7 +20,7 @@ def _compute_conf_thresh(data):
 
 # --- VISUALIZATION --- #
 
-def make_matching_figure(
+def make_matching_figure_old(
         img0, img1, mkpts0, mkpts1, color,
         kpts0=None, kpts1=None, text=[], dpi=75, path=None):
     # draw image pair
@@ -36,8 +37,8 @@ def make_matching_figure(
 
     if kpts0 is not None:
         assert kpts1 is not None
-        axes[0].scatter(kpts0[:, 0], kpts0[:, 1], c='w', s=2)
-        axes[1].scatter(kpts1[:, 0], kpts1[:, 1], c='w', s=2)
+        axes[0].scatter(kpts0[:, 0], kpts0[:, 1], c='w', s=2, marker='x', linewidths=0.1)
+        axes[1].scatter(kpts1[:, 0], kpts1[:, 1], c='w', s=2, marker='x', linewidths=0.1)
 
     # draw matches
     if mkpts0.shape[0] != 0 and mkpts1.shape[0] != 0:
@@ -48,7 +49,6 @@ def make_matching_figure(
 
         ###########
         # add random indices
-        import random
         indices = list(range(len(mkpts0)))
         random.shuffle(indices)
         ###########
@@ -59,18 +59,21 @@ def make_matching_figure(
             # c = color[i]
             fig.lines = [matplotlib.lines.Line2D((fkpts0[i, 0], fkpts1[i, 0]),
                                                  (fkpts0[i, 1], fkpts1[i, 1]),
-                                                 transform=fig.transFigure, c='b', linewidth=1)
+                                                 transform=fig.transFigure, c='b', linewidth=0.3)
                          ###########
-                         for i in indices[:10]]
+                         for i in indices[:20]]
             ###########
             # for i in range(len(mkpts0))]
 
-            axes[0].scatter(mkpts0[:, 0], mkpts0[:, 1], c='cyan', s=0.1)
-            axes[1].scatter(mkpts1[:, 0], mkpts1[:, 1], c='cyan', s=0.1)
+            # axes[0].scatter(mkpts0[:, 0], mkpts0[:, 1], c='cyan', s=0.1)
+            # axes[1].scatter(mkpts1[:, 0], mkpts1[:, 1], c='cyan', s=0.1)
+            # use red cross to highlight
+            axes[0].scatter(mkpts0[:, 0], mkpts0[:, 1], c='red', s=1, marker='x', linewidths=0.1)
+            axes[1].scatter(mkpts1[:, 0], mkpts1[:, 1], c='red', s=1, marker='x', linewidths=0.1)
         else:
             fig.lines = [matplotlib.lines.Line2D((fkpts0[i, 0], fkpts1[i, 0]),
                                                  (fkpts0[i, 1], fkpts1[i, 1]),
-                                                 transform=fig.transFigure, c=color[i], linewidth=0.5)
+                                                 transform=fig.transFigure, c=color[i], linewidth=0.1)
                          for i in indices[:10]]
             # for i in range(len(mkpts0))]
 
@@ -90,6 +93,96 @@ def make_matching_figure(
         plt.close()
     else:
         return fig
+
+
+def make_matching_figure(
+        img0, img1, mkpts0, mkpts1, color,
+        kpts0=None, kpts1=None, text=[], dpi=75, path=None, save_individual=True):
+    """
+    Visualize matching keypoints between two images, with an option to save them as separate images.
+
+    :param img0: First image (numpy array).
+    :param img1: Second image (numpy array).
+    :param mkpts0: Matched keypoints in the first image (N, 2).
+    :param mkpts1: Matched keypoints in the second image (N, 2).
+    :param color: Color for matches (can be uniform or per-match).
+    :param kpts0: Optional keypoints for image 0 (N, 2).
+    :param kpts1: Optional keypoints for image 1 (N, 2).
+    :param text: List of annotation text.
+    :param dpi: Figure resolution.
+    :param path: Path to save the combined figure.
+    :param save_individual: Whether to save the individual images separately.
+    :return: None or Matplotlib figure (if `path` is None).
+    """
+    assert mkpts0.shape[0] == mkpts1.shape[0], f'mkpts0: {mkpts0.shape[0]} vs mkpts1: {mkpts1.shape[0]}'
+
+    fig, axes = plt.subplots(1, 2, figsize=(10, 6), dpi=dpi)
+    axes[0].imshow(img0, cmap='gray')
+    axes[1].imshow(img1, cmap='gray')
+
+    for i in range(2):  # Remove axis ticks and frames
+        axes[i].axis("off")
+
+    plt.tight_layout(pad=1)
+
+    if kpts0 is not None and kpts1 is not None:
+        axes[0].scatter(kpts0[:, 0], kpts0[:, 1], c='w', s=2, marker='x', linewidths=0.1)
+        axes[1].scatter(kpts1[:, 0], kpts1[:, 1], c='w', s=2, marker='x', linewidths=0.1)
+
+    # Draw matches
+    if mkpts0.shape[0] != 0 and mkpts1.shape[0] != 0:
+        fig.canvas.draw()
+        transFigure = fig.transFigure.inverted()
+        fkpts0 = transFigure.transform(axes[0].transData.transform(mkpts0))
+        fkpts1 = transFigure.transform(axes[1].transData.transform(mkpts1))
+
+        indices = list(range(len(mkpts0)))
+        random.shuffle(indices)
+
+        use_uniform_color = True
+        if use_uniform_color:
+            fig.lines = [matplotlib.lines.Line2D((fkpts0[i, 0], fkpts1[i, 0]),
+                                                 (fkpts0[i, 1], fkpts1[i, 1]),
+                                                 transform=fig.transFigure, c='b', linewidth=0.3)
+                         for i in indices[:20]]
+            axes[0].scatter(mkpts0[:, 0], mkpts0[:, 1], c='red', s=1, marker='x', linewidths=0.1)
+            axes[1].scatter(mkpts1[:, 0], mkpts1[:, 1], c='red', s=1, marker='x', linewidths=0.1)
+        else:
+            fig.lines = [matplotlib.lines.Line2D((fkpts0[i, 0], fkpts1[i, 0]),
+                                                 (fkpts0[i, 1], fkpts1[i, 1]),
+                                                 transform=fig.transFigure, c=color[i], linewidth=0.1)
+                         for i in indices[:10]]
+            axes[0].scatter(mkpts0[:, 0], mkpts0[:, 1], c=color, s=0.1)
+            axes[1].scatter(mkpts1[:, 0], mkpts1[:, 1], c=color, s=0.1)
+
+    # Add annotation text
+    txt_color = 'k' if img0[:100, :200].mean() > 200 else 'w'
+    fig.text(
+        0.01, 0.99, '\n'.join(text), transform=fig.axes[0].transAxes,
+        fontsize=15, va='top', ha='left', color=txt_color)
+
+    # Save or return figure
+    # if path:
+    plt.savefig(str(path), bbox_inches='tight', pad_inches=0)
+    plt.close(fig)
+
+    # Save individual images if required
+    if save_individual:
+        fig_individual_1, ax0 = plt.subplots(figsize=(10, 6), dpi=dpi)
+        ax0.imshow(img0, cmap='gray')
+        ax0.scatter(mkpts0[:, 0], mkpts0[:, 1], c='red', s=1, marker='x', linewidths=0.1)
+        ax0.axis("off")
+        plt.savefig(path.replace('.jpg', '_left.jpg'), bbox_inches='tight', pad_inches=0)
+        plt.close(fig_individual_1)
+
+        fig_individual_2, ax1 = plt.subplots(figsize=(10, 6), dpi=dpi)
+        ax1.imshow(img1, cmap='gray')
+        ax1.scatter(mkpts1[:, 0], mkpts1[:, 1], c='red', s=1, marker='x', linewidths=0.1)
+        ax1.axis("off")
+        plt.savefig(path.replace('.jpg', '_right.jpg'), bbox_inches='tight', pad_inches=0)
+        plt.close(fig_individual_2)
+
+    a = 0
 
 
 def _make_evaluation_figure(data, b_id, alpha='dynamic'):
